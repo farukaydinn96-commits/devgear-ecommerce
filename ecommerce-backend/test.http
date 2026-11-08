@@ -1,5 +1,5 @@
 ### Kullanıcı Girişi Testi (Önce bunu çalıştırıp token al)
-POST http://localhost:5001/api/users/login
+POST https://devgear-api.onrender.com/api/users/login
 Content-Type: application/json
 
 {
@@ -8,9 +8,10 @@ Content-Type: application/json
 }
 
 ### Kullanıcı Profilini Getir (Korumalı Rota - Token ile çalışır)
-GET http://localhost:5001/api/users/profile
+GET https://devgear-api.onrender.com/api/users/profile
+
 ### Yeni Sipariş Oluştur (Korumalı Rota - Token ile çalışır)
-POST http://localhost:5001/api/orders
+POST https://devgear-api.onrender.com/api/orders
 Content-Type: application/json
 
 {
@@ -34,9 +35,12 @@ Content-Type: application/json
   "shippingPrice": 0.00,
   "totalPrice": 3775.98
 }
+
 ### Kendi Siparişlerimi Getir (Siparişlerim Sayfası İçin)
-GET http://localhost:5001/api/orders/mine
+GET https://devgear-api.onrender.com/api/orders/mine
+
 ### Tüm Siparişleri Getir (Sadece Admin Görebilir)
-GET http://localhost:5001/api/orders
+GET https://devgear-api.onrender.com/api/orders
+
 ### Yanlış Adres Testi (Özel 404 Hata JSON'u Dönmeli)
-GET http://localhost:5001/api/olmayan-bir-sayfa
+GET https://devgear-api.onrender.com/api/olmayan-bir-sayfa
