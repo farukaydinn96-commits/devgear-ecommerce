@@ -1,15 +1,8 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  server: {
-    port: 3000, // Frontend 3000 portunda çalışacak
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5001',
-        changeOrigin: true
-      }
-    }
-  }
-})
+  // GitHub Pages'in projeyi doğru klasörde bulabilmesi için bu satır şart:
+});
