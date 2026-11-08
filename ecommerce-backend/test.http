@@ -1,0 +1,42 @@
+### Kullanıcı Girişi Testi (Önce bunu çalıştırıp token al)
+POST http://localhost:5001/api/users/login
+Content-Type: application/json
+
+{
+  "email": "admin@devgear.com",
+  "password": "123456"
+}
+
+### Kullanıcı Profilini Getir (Korumalı Rota - Token ile çalışır)
+GET http://localhost:5001/api/users/profile
+### Yeni Sipariş Oluştur (Korumalı Rota - Token ile çalışır)
+POST http://localhost:5001/api/orders
+Content-Type: application/json
+
+{
+  "orderItems": [
+    {
+      "name": "MacBook Pro M3 Max 14 inç",
+      "qty": 1,
+      "image": "/images/macbook.jpg",
+      "price": 3199.99,
+      "product": "6aed31e833e76e280a051073" 
+    }
+  ],
+  "shippingAddress": {
+    "address": "123 Teknoloji Sokak, No: 42",
+    "city": "Bursa",
+    "postalCode": "16000",
+    "country": "Türkiye"
+  },
+  "paymentMethod": "Credit Card",
+  "taxPrice": 575.99,
+  "shippingPrice": 0.00,
+  "totalPrice": 3775.98
+}
+### Kendi Siparişlerimi Getir (Siparişlerim Sayfası İçin)
+GET http://localhost:5001/api/orders/mine
+### Tüm Siparişleri Getir (Sadece Admin Görebilir)
+GET http://localhost:5001/api/orders
+### Yanlış Adres Testi (Özel 404 Hata JSON'u Dönmeli)
+GET http://localhost:5001/api/olmayan-bir-sayfa
