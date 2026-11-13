@@ -17,8 +17,11 @@ import { notFound, errorHandler } from './middlewares/errorMiddleware.js';
 dotenv.config();
 
 const startServer = async () => {
-  await connectDB();
-  try { await connectRedis(); } catch {}
+  const dbReady = await connectDB();
+  await connectRedis();
+
+  if (!dbReady) return;
+
   try {
     const sampleProduct = await Product.findOne();
     if (!sampleProduct || !sampleProduct.numReviews || sampleProduct.numReviews === 0) {
@@ -36,9 +39,9 @@ const startServer = async () => {
       }));
       await Product.insertMany(sampleProducts);
     }
-    if (redisClient && redisClient.isOpen) await redisClient.flushAll();
+    if (redisClient?.isOpen) await redisClient.flushAll();
   } catch (err) {
-    console.error('Seed check warning:', err.message);
+    console.warn('Seed check skipped:', err.message);
   }
 };
 

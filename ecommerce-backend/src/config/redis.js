@@ -3,16 +3,33 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const redisClient = createClient({
-  url: process.env.REDIS_URL
-});
+const noopClient = {
+  isOpen: false,
+  get: async () => null,
+  setEx: async () => {},
+  del: async () => {},
+  flushAll: async () => {}
+};
 
-redisClient.on('error', (err) => console.log('Redis Client Hatası', err));
-redisClient.on('connect', () => console.log('Redis Bağlandı'));
+const redisClient = process.env.REDIS_URL
+  ? createClient({
+      url: process.env.REDIS_URL,
+      socket: { reconnectStrategy: false, connectTimeout: 5000 }
+    })
+  : noopClient;
+
+if (process.env.REDIS_URL) {
+  redisClient.on('error', (err) => console.warn('Redis Warning:', err.message));
+}
 
 export const connectRedis = async () => {
-  if (!redisClient.isOpen) {
-    await redisClient.connect();
+  if (process.env.REDIS_URL && !redisClient.isOpen) {
+    try {
+      await redisClient.connect();
+      console.log('Redis Connected');
+    } catch (err) {
+      console.warn('Redis cache skipped:', err.message);
+    }
   }
 };
 

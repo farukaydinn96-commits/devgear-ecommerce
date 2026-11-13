@@ -1,37 +1,34 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/userModel.js';
 
-// 1. Sadece Giriş Yapmış Kullanıcılar İçin (Protect)
 export const protect = async (req, res, next) => {
-  let token;
+  let token = req.cookies?.jwt;
 
-  // Cookie-parser sayesinde token'ı doğrudan çerezlerden okuyabiliyoruz
-  token = req.cookies.jwt;
+  if (!token && req.headers.authorization?.startsWith('Bearer')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
 
-  if (token) {
-    try {
-      // Token'ın bizim gizli anahtarımızla oluşturulduğunu doğrula
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  if (!token) {
+    return res.status(401).json({ message: 'Not authorized: token missing' });
+  }
 
-      // Token'ın içindeki userId ile veritabanından kullanıcıyı bul
-      // .select('-password') diyerek şifreyi dışarıda bırakıyoruz (güvenlik için)
-      req.user = await User.findById(decoded.userId).select('-password');
-      
-      // Her şey yolundaysa bir sonraki işleme (controller'a) geçiş izni ver
-      next();
-    } catch (error) {
-      res.status(401).json({ message: 'Yetkisiz erişim: Token geçersiz veya süresi dolmuş' });
+  try {
+    const secret = process.env.JWT_SECRET || 'devgear_jwt_secret_key_2026';
+    const decoded = jwt.verify(token, secret);
+    req.user = await User.findById(decoded.userId).select('-password');
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authorized: user not found' });
     }
-  } else {
-    res.status(401).json({ message: 'Yetkisiz erişim: Token bulunamadı' });
+    next();
+  } catch {
+    res.status(401).json({ message: 'Not authorized: token invalid' });
   }
 };
 
-// 2. Sadece Adminler İçin (Admin)
 export const admin = (req, res, next) => {
   if (req.user && req.user.isAdmin) {
     next();
   } else {
-    res.status(401).json({ message: 'Yetkisiz erişim: Bu işlem için Admin yetkisi gerekiyor' });
+    res.status(401).json({ message: 'Not authorized as an admin' });
   }
 };

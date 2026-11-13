@@ -1,82 +1,101 @@
 import Order from '../models/orderModel.js';
+import Product from '../models/productModel.js';
+import redisClient from '../config/redis.js';
 
-// @desc    Yeni sipariş oluştur
-// @route   POST /api/orders
-// @access  Private (Sadece giriş yapmış kullanıcılar)
 export const addOrderItems = async (req, res) => {
-  const {
-    orderItems,
-    shippingAddress,
-    paymentMethod,
-    taxPrice,
-    shippingPrice,
-    totalPrice,
-  } = req.body;
+  try {
+    const { orderItems, shippingAddress, paymentMethod, taxPrice, shippingPrice, totalPrice } = req.body;
 
-  // Sepette ürün yoksa hata döndür
-  if (orderItems && orderItems.length === 0) {
-    res.status(400).json({ message: 'Siparişinizde ürün bulunmamaktadır' });
-    return;
-  } else {
-    // Yeni siparişi hazırla
+    if (!orderItems || orderItems.length === 0) {
+      return res.status(400).json({ message: 'No order items in cart' });
+    }
+
+    for (const item of orderItems) {
+      if (item.product && String(item.product).length === 24) {
+        const dbProd = await Product.findById(item.product);
+        if (dbProd) {
+          dbProd.countInStock = Math.max(0, dbProd.countInStock - Number(item.qty || 1));
+          await dbProd.save();
+        }
+      }
+    }
+    if (redisClient?.isOpen) await redisClient.del('products:all:v3');
+
     const order = new Order({
-      user: req.user._id, // Giriş yapan kullanıcının ID'sini otomatik ekler (protect sayesinde)
+      user: req.user._id,
       orderItems,
       shippingAddress,
       paymentMethod,
       taxPrice,
       shippingPrice,
-      totalPrice,
+      totalPrice
     });
 
-    // Veritabanına kaydet
     const createdOrder = await order.save();
     res.status(201).json(createdOrder);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
-// @desc    Giriş yapan kullanıcının kendi siparişlerini getir
-// @route   GET /api/orders/mine
-// @access  Private
+
 export const getMyOrders = async (req, res) => {
-  const orders = await Order.find({ user: req.user._id });
-  res.json(orders);
-};
-
-// @desc    ID'ye göre sipariş detaylarını getir
-// @route   GET /api/orders/:id
-// @access  Private
-export const getOrderById = async (req, res) => {
-  // populate: Siparişi getirerken, siparişi veren kullanıcının veritabanındaki adını ve emailini de içine dahil eder
-  const order = await Order.findById(req.params.id).populate('user', 'name email');
-
-  if (order) {
-    res.json(order);
-  } else {
-    res.status(404).json({ message: 'Sipariş bulunamadı' });
+  try {
+    const orders = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
-// @desc    Siparişi 'Teslim Edildi' (Delivered) olarak güncelle
-// @route   PUT /api/orders/:id/deliver
-// @access  Private/Admin
-export const updateOrderToDelivered = async (req, res) => {
-  const order = await Order.findById(req.params.id);
 
-  if (order) {
-    order.isDelivered = true;
-    order.deliveredAt = Date.now();
+export const getOrderById = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id).populate('user', 'name email');
+    if (order) return res.json(order);
+    res.status(404).json({ message: 'Order not found' });
+  } catch {
+    res.status(404).json({ message: 'Order not found' });
+  }
+};
 
+export const updateOrderToPaid = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+
+    order.isPaid = true;
+    order.paidAt = Date.now();
+    order.paymentResult = {
+      id: req.body.id || `stripe_${Date.now()}`,
+      status: req.body.status || 'COMPLETED',
+      update_time: String(Date.now()),
+      email_address: req.body.email_address || 'customer@devgear.com'
+    };
     const updatedOrder = await order.save();
     res.json(updatedOrder);
-  } else {
-    res.status(404).json({ message: 'Sipariş bulunamadı' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    Sistemdeki tüm siparişleri getir
-// @route   GET /api/orders
-// @access  Private/Admin
+export const updateOrderToDelivered = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+
+    order.isDelivered = true;
+    order.deliveredAt = Date.now();
+    const updatedOrder = await order.save();
+    res.json(updatedOrder);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const getOrders = async (req, res) => {
-  // populate ile siparişi veren kullanıcının sadece ID ve isim bilgisini de ekliyoruz
-  const orders = await Order.find({}).populate('user', 'id name');
-  res.json(orders);
+  try {
+    const orders = await Order.find({}).populate('user', 'id name');
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
