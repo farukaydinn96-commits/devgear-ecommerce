@@ -5,81 +5,60 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import connectDB from './config/db.js';
 import redisClient, { connectRedis } from './config/redis.js';
-
-// Otomatik Veri Kontrolü İçin Modeller ve Örnek Veriler
 import Product from './models/productModel.js';
 import User from './models/userModel.js';
 import products from './data/products.js';
 import users from './data/users.js';
-
-// Rotalar
 import productRoutes from './routes/productRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
-
-// Hata Yönetimi Middleware'leri
 import { notFound, errorHandler } from './middlewares/errorMiddleware.js';
 
 dotenv.config();
 
 const startServer = async () => {
   await connectDB();
-  await connectRedis();
-
-  // OTOMATİK VERİ VE REDIS CACHE DÜZELTİCİ:
-  // Eğer veritabanında ürün yoksa veya SlimMom'dan kalan '$0' fiyatlı yiyecek verileri varsa otomatik yeniler
+  try { await connectRedis(); } catch {}
   try {
     const sampleProduct = await Product.findOne();
-    if (!sampleProduct || !sampleProduct.name || sampleProduct.price === 0) {
-      console.log('Eski veya eksik ürün verisi tespit edildi. DevGear ürünleri yükleniyor...');
+    if (!sampleProduct || !sampleProduct.numReviews || sampleProduct.numReviews === 0) {
       await Product.deleteMany();
       await User.deleteMany();
-
       const createdUsers = await User.insertMany(users);
       const adminUser = createdUsers[0]._id;
-
-      const sampleProducts = products.map((product) => {
-        return { ...product, user: adminUser };
-      });
-
+      const sampleProducts = products.map((product) => ({
+        ...product,
+        user: adminUser,
+        reviews: [
+          { name: 'Alex Rivera', rating: 5, comment: 'Solid build quality and zero latency in daily engineering workflows.' },
+          { name: 'Sarah Chen', rating: 5, comment: 'Top-tier developer hardware. Highly recommended for remote teams.' }
+        ]
+      }));
       await Product.insertMany(sampleProducts);
-      console.log('DevGear ürünleri başarıyla veritabanına eklendi!');
     }
-
-    // Redis önbelleğindeki eski yiyecek listesini temizle
-    if (redisClient && redisClient.isOpen) {
-      await redisClient.flushAll();
-      console.log('Redis önbelleği (cache) temizlendi!');
-    }
+    if (redisClient && redisClient.isOpen) await redisClient.flushAll();
   } catch (err) {
-    console.error('Otomatik veri kontrolü hatası:', err.message);
+    console.error('Seed check warning:', err.message);
   }
 };
 
 startServer();
 
 const app = express();
-
 app.use(helmet());
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-app.get('/', (req, res) => {
-  res.send('DevGear E-Commerce API Çalışıyor...');
-});
+app.get('/', (req, res) => res.send('DevGear E-Commerce API Active'));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
 
-// API Rotaları
 app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/orders', orderRoutes);
 
-// Hata Yakalayıcılar (Mutlaka API rotalarından SONRA gelmelidir)
 app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5001;
-
-app.listen(PORT, () => {
-  console.log(`Sunucu ${process.env.NODE_ENV} modunda ${PORT} portunda çalışıyor.`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

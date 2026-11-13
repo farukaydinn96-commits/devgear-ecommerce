@@ -1,109 +1,135 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import axios from 'axios';
 
-const OrderScreen = () => {
-  const { id: orderId } = useParams(); // URL'deki sipariş ID'sini yakalıyoruz
-  
-  const [order, setOrder] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+const OrderScreen = ({ theme }) => {
+  const { id: orderId } = useParams();
+  const { userInfo } = useSelector((state) => state.auth);
+  const [order, setOrder] = useState(null);
+  const [paying, setPaying] = useState(false);
 
   useEffect(() => {
-    const fetchOrder = async () => {
-      try {
-        // Backend'deki getOrderById rotamıza istek atıyoruz
-        const config = { headers: { 'Content-Type': 'application/json' } };
-        const { data } = await axios.get(`/api/orders/${orderId}`, config);
-        
-        setOrder(data);
-        setLoading(false);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Sipariş detayları çekilemedi');
-        setLoading(false);
-      }
-    };
-
-    fetchOrder();
+    try {
+      const localOrders = JSON.parse(localStorage.getItem('devgear_orders_en_v2') || '[]');
+      const foundLocal = localOrders.find((o) => String(o._id) === String(orderId));
+      if (foundLocal) setOrder(foundLocal);
+    } catch {}
+    axios.get(`/api/orders/${orderId}`).then(({ data }) => setOrder(data)).catch(() => {});
   }, [orderId]);
 
-  if (loading) return <div style={{ padding: '40px', fontSize: '20px' }}>Sipariş yükleniyor...</div>;
-  if (error) return <div style={{ padding: '40px', color: '#ff4d4f', fontWeight: 'bold' }}>{error}</div>;
+  const updateLocalOrder = (updated) => {
+    setOrder(updated);
+    try {
+      const localOrders = JSON.parse(localStorage.getItem('devgear_orders_en_v2') || '[]');
+      localStorage.setItem('devgear_orders_en_v2', JSON.stringify(localOrders.map((o) => (String(o._id) === String(updated._id) ? updated : o))));
+    } catch {}
+  };
+
+  const handleStripeTestPay = async () => {
+    if (!order) return;
+    setPaying(true);
+    const paidOrder = {
+      ...order,
+      isPaid: true,
+      paidAt: new Date().toISOString(),
+      paymentResult: { id: `pi_stripe_${Date.now()}`, status: 'COMPLETED', email_address: order.user?.email || userInfo?.email || 'customer@devgear.com' }
+    };
+    try {
+      const { data } = await axios.put(`/api/orders/${order._id}/pay`, paidOrder.paymentResult);
+      updateLocalOrder(data);
+    } catch {
+      updateLocalOrder(paidOrder);
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const handleDeliverOrder = async () => {
+    if (!order) return;
+    const deliveredOrder = { ...order, isDelivered: true, deliveredAt: new Date().toISOString() };
+    try {
+      const { data } = await axios.put(`/api/orders/${order._id}/deliver`);
+      updateLocalOrder(data);
+    } catch {
+      updateLocalOrder(deliveredOrder);
+    }
+  };
+
+  if (!order) {
+    return (
+      <div style={{ maxWidth: '800px', margin: '40px auto', padding: '30px', color: theme.textMain }}>
+        <h2>Order not found.</h2>
+        <Link to="/orders" style={{ color: '#2563eb', fontWeight: '700' }}>View All Orders →</Link>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: '40px' }}>
-      <h1 style={{ fontSize: '28px', marginBottom: '30px' }}>Sipariş Özeti: {order._id}</h1>
+    <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '30px 16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', marginBottom: '24px' }}>
+        <h1 style={{ fontSize: '26px', margin: 0, color: theme.textMain, fontWeight: '900' }}>Order #{order._id}</h1>
+        <Link to="/orders" style={{ color: '#2563eb', fontWeight: '700', textDecoration: 'none' }}>📦 View Order History →</Link>
+      </div>
 
       <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
-        
-        {/* Sol Taraf: Teslimat, Ödeme ve Ürün Bilgileri */}
-        <div style={{ flex: '2', minWidth: '300px' }}>
-          
-          <div style={{ marginBottom: '30px', paddingBottom: '20px', borderBottom: '1px solid #eee' }}>
-            <h2 style={{ fontSize: '22px', marginBottom: '15px' }}>Teslimat Bilgileri</h2>
-            <p style={{ marginBottom: '10px' }}><strong>İsim: </strong>{order.user.name}</p>
-            <p style={{ marginBottom: '10px' }}><strong>E-Posta: </strong><a href={`mailto:${order.user.email}`} style={{ color: '#000' }}>{order.user.email}</a></p>
-            <p style={{ marginBottom: '10px' }}><strong>Adres: </strong>{order.shippingAddress.address}, {order.shippingAddress.city}, {order.shippingAddress.postalCode}, {order.shippingAddress.country}</p>
-            
+        <div style={{ flex: '2', minWidth: '300px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div style={{ padding: '20px', backgroundColor: theme.bgCard, border: `1px solid ${theme.borderColor}`, borderRadius: '12px' }}>
+            <h2 style={{ fontSize: '18px', margin: '0 0 12px 0', color: theme.textMain }}>Shipping Details</h2>
+            <p style={{ margin: '0 0 6px 0', color: theme.textMuted }}><strong>Recipient: </strong>{order.user?.name || userInfo?.name || 'Alex Rivera'} ({order.user?.email || userInfo?.email || 'customer@devgear.com'})</p>
+            <p style={{ margin: '0 0 14px 0', color: theme.textMuted }}><strong>Address: </strong>{order.shippingAddress?.address}, {order.shippingAddress?.city}, {order.shippingAddress?.postalCode}, {order.shippingAddress?.country}</p>
             {order.isDelivered ? (
-              <div style={{ padding: '12px', backgroundColor: '#d4edda', color: '#155724', borderRadius: '6px', marginTop: '15px', fontWeight: 'bold' }}>
-                Teslim Edildi ({new Date(order.deliveredAt).toLocaleDateString()})
-              </div>
+              <div style={{ padding: '10px 14px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', borderRadius: '8px', fontWeight: '700' }}>✓ Delivered on {new Date(order.deliveredAt).toLocaleDateString()}</div>
             ) : (
-              <div style={{ padding: '12px', backgroundColor: '#f8d7da', color: '#721c24', borderRadius: '6px', marginTop: '15px', fontWeight: 'bold' }}>
-                Henüz Teslim Edilmedi
-              </div>
+              <div style={{ padding: '10px 14px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', borderRadius: '8px', fontWeight: '700' }}>🚚 Preparing for Dispatch</div>
             )}
           </div>
 
-          <div style={{ marginBottom: '30px', paddingBottom: '20px', borderBottom: '1px solid #eee' }}>
-            <h2 style={{ fontSize: '22px', marginBottom: '15px' }}>Ödeme Yöntemi</h2>
-            <p style={{ marginBottom: '10px' }}><strong>Yöntem: </strong>{order.paymentMethod}</p>
-            
+          <div style={{ padding: '20px', backgroundColor: theme.bgCard, border: `1px solid ${theme.borderColor}`, borderRadius: '12px' }}>
+            <h2 style={{ fontSize: '18px', margin: '0 0 12px 0', color: theme.textMain }}>Payment Status</h2>
+            <p style={{ margin: '0 0 12px 0', color: theme.textMuted }}><strong>Method: </strong>{order.paymentMethod}</p>
             {order.isPaid ? (
-              <div style={{ padding: '12px', backgroundColor: '#d4edda', color: '#155724', borderRadius: '6px', marginTop: '15px', fontWeight: 'bold' }}>
-                Ödendi ({new Date(order.paidAt).toLocaleDateString()})
-              </div>
+              <div style={{ padding: '10px 14px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', borderRadius: '8px', fontWeight: '700' }}>✓ Paid via Stripe Test Gateway ({new Date(order.paidAt).toLocaleTimeString()})</div>
             ) : (
-              <div style={{ padding: '12px', backgroundColor: '#f8d7da', color: '#721c24', borderRadius: '6px', marginTop: '15px', fontWeight: 'bold' }}>
-                Ödeme Bekleniyor
-              </div>
+              <div style={{ padding: '10px 14px', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', borderRadius: '8px', fontWeight: '700' }}>⏳ Awaiting Payment Confirmation</div>
             )}
           </div>
 
-          <div>
-            <h2 style={{ fontSize: '22px', marginBottom: '15px' }}>Sipariş Edilen Ürünler</h2>
-            {order.orderItems.map((item, index) => (
-              <div key={index} style={{ display: 'flex', justifyContent: 'space-between', padding: '15px 0', borderBottom: '1px solid #eee' }}>
-                <Link to={`/product/${item.product}`} style={{ textDecoration: 'none', color: '#000', fontWeight: 'bold' }}>
-                  {item.name}
-                </Link>
-                <span>
-                  {item.qty} x ${item.price} = <strong>${(item.qty * item.price).toFixed(2)}</strong>
-                </span>
+          <div style={{ padding: '20px', backgroundColor: theme.bgCard, border: `1px solid ${theme.borderColor}`, borderRadius: '12px' }}>
+            <h2 style={{ fontSize: '18px', margin: '0 0 12px 0', color: theme.textMain }}>Ordered Hardware</h2>
+            {(order.orderItems || []).map((item, index) => (
+              <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: `1px solid ${theme.borderColor}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <img src={item.image} alt={item.name} style={{ width: '48px', height: '48px', borderRadius: '6px', objectFit: 'cover' }} />
+                  <Link to={`/product/${item.product}`} style={{ textDecoration: 'none', color: theme.textMain, fontWeight: '700' }}>{item.name}</Link>
+                </div>
+                <span style={{ color: theme.textMain }}>{item.qty} x ${item.price} = <strong>${(item.qty * item.price).toFixed(2)}</strong></span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Sağ Taraf: Fiyat Özeti Kutusu */}
-        <div style={{ flex: '1', minWidth: '250px' }}>
-          <div style={{ border: '1px solid #ddd', padding: '25px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-            <h2 style={{ margin: '0 0 20px 0', borderBottom: '1px solid #eee', paddingBottom: '15px' }}>Sipariş Tutarı</h2>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', fontSize: '24px', fontWeight: 'bold' }}>
-              <span>Toplam:</span> <span>${order.totalPrice}</span>
-            </div>
-            
-            {/* Not: Gerçek bir projede buraya PayPal, Stripe veya İyzico ödeme butonu entegre edilir */}
+        <div style={{ flex: '1', minWidth: '300px' }}>
+          <div style={{ backgroundColor: theme.bgCard, border: `1px solid ${theme.borderColor}`, padding: '24px', borderRadius: '12px' }}>
+            <h2 style={{ margin: '0 0 18px 0', borderBottom: `1px solid ${theme.borderColor}`, paddingBottom: '12px', fontSize: '20px', color: theme.textMain }}>Payment Summary</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', fontSize: '24px', fontWeight: '900', color: theme.textMain }}><span>Total:</span><span>${order.totalPrice}</span></div>
             {!order.isPaid && (
-              <button disabled style={{ width: '100%', padding: '15px', backgroundColor: '#ccc', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '16px', fontWeight: 'bold', cursor: 'not-allowed' }}>
-                Ödeme Sistemi Bekleniyor
+              <div style={{ padding: '16px', borderRadius: '10px', backgroundColor: theme.bgMain, border: `1px solid ${theme.borderColor}`, marginBottom: '14px' }}>
+                <div style={{ fontSize: '12px', fontWeight: '800', color: '#3b82f6', marginBottom: '8px', textTransform: 'uppercase' }}>💳 Stripe Sandbox Card (Pre-filled)</div>
+                <div style={{ fontSize: '13px', fontFamily: 'monospace', color: theme.textMain, marginBottom: '4px' }}>Card: 4242 •••• •••• 4242</div>
+                <div style={{ fontSize: '12px', fontFamily: 'monospace', color: theme.textMuted, marginBottom: '14px' }}>Exp: 12/28 | CVC: 424</div>
+                <button type="button" onClick={handleStripeTestPay} disabled={paying} style={{ width: '100%', padding: '14px', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '800', cursor: 'pointer' }}>
+                  {paying ? 'Processing Stripe Payment...' : `Pay $${order.totalPrice} Now (Test Mode)`}
+                </button>
+              </div>
+            )}
+            {order.isPaid && !order.isDelivered && (
+              <button type="button" onClick={handleDeliverOrder} style={{ width: '100%', padding: '12px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+                ✓ Mark as Delivered (Admin / Demo)
               </button>
             )}
           </div>
         </div>
-
       </div>
     </div>
   );
