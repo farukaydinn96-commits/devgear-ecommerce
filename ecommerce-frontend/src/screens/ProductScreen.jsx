@@ -6,11 +6,14 @@ import { addToCart } from '../slices/cartSlice';
 import { INITIAL_PRODUCTS } from '../constants/initialProducts';
 
 const findCachedProduct = (productId) => {
-  try {
-    const cached = JSON.parse(localStorage.getItem('devgear_products_en_v4') || '[]');
-    const found = cached.find((p) => String(p._id) === String(productId));
-    if (found) return found;
-  } catch {}
+  const keys = ['devgear_products_en_v4', 'devgear_products_en_v3', 'devgear_products_v2'];
+  for (const key of keys) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(key) || '[]');
+      const found = cached.find((p) => String(p._id) === String(productId));
+      if (found) return found;
+    } catch {}
+  }
   return INITIAL_PRODUCTS.find((p) => String(p._id) === String(productId)) || INITIAL_PRODUCTS[0];
 };
 
@@ -31,19 +34,24 @@ const ProductScreen = ({ theme }) => {
   useEffect(() => {
     setProduct(findCachedProduct(productId));
     axios.get(`/api/products/${productId}`).then(({ data }) => {
-      const fallback = findCachedProduct(productId);
       const isOldTrackpad = data.name === 'Apple Magic Trackpad';
-      const hasTurkishReview = Array.isArray(data.reviews) && data.reviews.some((r) => /[ğüşıöçĞÜŞİÖÇ]/.test(r.comment || ''));
+      const matched =
+        INITIAL_PRODUCTS.find((p) => p.name.toLowerCase() === (data.name || '').toLowerCase()) ||
+        (isOldTrackpad ? INITIAL_PRODUCTS[4] : findCachedProduct(productId));
+      const hasTurkishReview =
+        Array.isArray(data.reviews) && data.reviews.some((r) => /[ğüşıöçĞÜŞİÖÇ]/.test(r.comment || ''));
+
       setProduct({
-        ...fallback,
+        ...matched,
         ...data,
-        name: isOldTrackpad ? fallback.name : data.name,
-        brand: isOldTrackpad ? fallback.brand : data.brand,
-        price: isOldTrackpad ? fallback.price : data.price,
-        description: isOldTrackpad ? fallback.description : data.description,
-        rating: Number(data.rating) > 0 ? data.rating : fallback.rating,
-        numReviews: Number(data.numReviews) > 0 ? data.numReviews : fallback.numReviews,
-        reviews: Array.isArray(data.reviews) && data.reviews.length > 0 && !hasTurkishReview ? data.reviews : fallback.reviews
+        name: isOldTrackpad ? matched.name : data.name,
+        brand: isOldTrackpad ? matched.brand : data.brand,
+        price: isOldTrackpad ? matched.price : data.price,
+        image: isOldTrackpad ? matched.image : data.image || matched.image,
+        description: isOldTrackpad ? matched.description : data.description,
+        rating: Number(data.rating) > 0 ? data.rating : matched.rating,
+        numReviews: Number(data.numReviews) > 0 ? data.numReviews : matched.numReviews,
+        reviews: Array.isArray(data.reviews) && data.reviews.length > 0 && !hasTurkishReview ? data.reviews : matched.reviews
       });
     }).catch(() => {});
   }, [productId]);
@@ -98,7 +106,8 @@ const ProductScreen = ({ theme }) => {
               cursor: 'zoom-in',
               border: `1px solid ${theme.borderColor}`,
               position: 'relative',
-              backgroundColor: '#0f172a'
+              backgroundColor: '#0f172a',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
             }}
           >
             <img
@@ -110,12 +119,12 @@ const ProductScreen = ({ theme }) => {
                 display: 'block',
                 objectFit: 'cover',
                 transformOrigin: `${mousePosition.x}% ${mousePosition.y}%`,
-                transform: isZoomed ? 'scale(2.2)' : 'scale(1)',
-                transition: 'transform 0.25s ease-out'
+                transform: isZoomed ? 'scale(2.25)' : 'scale(1)',
+                transition: isZoomed ? 'transform 0.08s ease-out' : 'transform 0.28s ease-out'
               }}
             />
             {!isZoomed && (
-              <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(15, 23, 42, 0.75)', color: '#fff', fontSize: '11px', fontWeight: '600', padding: '5px 10px', borderRadius: '6px', pointerEvents: 'none' }}>
+              <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(15, 23, 42, 0.78)', color: '#fff', fontSize: '11px', fontWeight: '700', padding: '5px 10px', borderRadius: '6px', pointerEvents: 'none' }}>
                 🔍 Hover to Zoom
               </span>
             )}
