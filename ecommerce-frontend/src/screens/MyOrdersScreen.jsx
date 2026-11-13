@@ -2,36 +2,94 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
-const SAMPLE_ORDERS = [
+export const DEFAULT_SAMPLE_ORDERS = [
+  {
+    _id: 'ORD-894215',
+    createdAt: '2026-11-12T16:40:00.000Z',
+    totalPrice: '228.85',
+    itemsPrice: '199.00',
+    shippingPrice: '0.00',
+    taxPrice: '29.85',
+    isPaid: false,
+    isDelivered: false,
+    paymentMethod: 'Stripe (Test Mode)',
+    user: { name: 'Alex Rivera', email: 'customer@devgear.com' },
+    shippingAddress: {
+      address: '742 Evergreen Terrace, Suite 200',
+      city: 'San Francisco',
+      postalCode: '94107',
+      country: 'United States'
+    },
+    orderItems: [
+      {
+        name: 'Keychron Q1 Pro Mechanical Keyboard',
+        qty: 1,
+        price: 199.00,
+        image: 'https://images.unsplash.com/photo-1595225476474-87563907a212?w=800&q=80',
+        product: 'devgear-p3'
+      }
+    ]
+  },
   {
     _id: 'ORD-894210',
     createdAt: '2026-11-08T14:20:00.000Z',
-    totalPrice: '398.99',
+    totalPrice: '458.84',
+    itemsPrice: '398.99',
+    shippingPrice: '0.00',
+    taxPrice: '59.85',
     isPaid: true,
     paidAt: '2026-11-08T14:21:00.000Z',
     isDelivered: true,
     deliveredAt: '2026-11-10T11:00:00.000Z',
     paymentMethod: 'Stripe (Test Mode)',
-    shippingAddress: { address: '742 Evergreen Terrace, Suite 200', city: 'San Francisco', postalCode: '94107', country: 'United States' },
-    orderItems: [{ name: 'Sony WH-1000XM5 Noise Cancelling', qty: 1, price: 398.99, image: 'https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=800&q=80', product: 'devgear-p2' }]
+    user: { name: 'Alex Rivera', email: 'customer@devgear.com' },
+    shippingAddress: {
+      address: '742 Evergreen Terrace, Suite 200',
+      city: 'San Francisco',
+      postalCode: '94107',
+      country: 'United States'
+    },
+    orderItems: [
+      {
+        name: 'Sony WH-1000XM5 Noise Cancelling',
+        qty: 1,
+        price: 398.99,
+        image: 'https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=800&q=80',
+        product: 'devgear-p2'
+      }
+    ]
   }
 ];
 
-const MyOrdersScreen = ({ theme }) => {
-  const [orders, setOrders] = useState(() => {
-    try {
-      const local = JSON.parse(localStorage.getItem('devgear_orders_en_v2') || '[]');
-      return local.length > 0 ? local : SAMPLE_ORDERS;
-    } catch {
-      return SAMPLE_ORDERS;
+export const getStoredOrders = () => {
+  try {
+    const raw = localStorage.getItem('devgear_orders_en_v2');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const existingIds = new Set(parsed.map((o) => String(o._id)));
+        const merged = [...parsed, ...DEFAULT_SAMPLE_ORDERS.filter((s) => !existingIds.has(String(s._id)))];
+        return merged;
+      }
     }
-  });
+    localStorage.setItem('devgear_orders_en_v2', JSON.stringify(DEFAULT_SAMPLE_ORDERS));
+  } catch {}
+  return DEFAULT_SAMPLE_ORDERS;
+};
+
+const MyOrdersScreen = ({ theme }) => {
+  const [orders, setOrders] = useState(() => getStoredOrders());
 
   useEffect(() => {
+    const currentLocal = getStoredOrders();
+    setOrders(currentLocal);
+
     axios.get('/api/orders/mine').then(({ data }) => {
-      const local = JSON.parse(localStorage.getItem('devgear_orders_en_v2') || '[]');
-      const combined = [...local, ...(Array.isArray(data) ? data : [])];
-      if (combined.length > 0) setOrders(combined);
+      if (Array.isArray(data) && data.length > 0) {
+        const localIds = new Set(currentLocal.map((o) => String(o._id)));
+        const combined = [...currentLocal, ...data.filter((d) => !localIds.has(String(d._id)))];
+        setOrders(combined);
+      }
     }).catch(() => {});
   }, []);
 

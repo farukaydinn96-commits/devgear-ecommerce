@@ -2,27 +2,39 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
+import { getStoredOrders, DEFAULT_SAMPLE_ORDERS } from './MyOrdersScreen';
+
+const findOrderById = (orderId) => {
+  const allLocal = getStoredOrders();
+  const match = allLocal.find((o) => String(o._id) === String(orderId));
+  if (match) return match;
+  return DEFAULT_SAMPLE_ORDERS.find((o) => String(o._id) === String(orderId)) || null;
+};
 
 const OrderScreen = ({ theme }) => {
   const { id: orderId } = useParams();
   const { userInfo } = useSelector((state) => state.auth);
-  const [order, setOrder] = useState(null);
+  const [order, setOrder] = useState(() => findOrderById(orderId));
   const [paying, setPaying] = useState(false);
 
   useEffect(() => {
-    try {
-      const localOrders = JSON.parse(localStorage.getItem('devgear_orders_en_v2') || '[]');
-      const foundLocal = localOrders.find((o) => String(o._id) === String(orderId));
-      if (foundLocal) setOrder(foundLocal);
-    } catch {}
-    axios.get(`/api/orders/${orderId}`).then(({ data }) => setOrder(data)).catch(() => {});
+    const localMatch = findOrderById(orderId);
+    if (localMatch) setOrder(localMatch);
+
+    axios.get(`/api/orders/${orderId}`).then(({ data }) => {
+      if (data && data._id) setOrder(data);
+    }).catch(() => {});
   }, [orderId]);
 
   const updateLocalOrder = (updated) => {
     setOrder(updated);
     try {
-      const localOrders = JSON.parse(localStorage.getItem('devgear_orders_en_v2') || '[]');
-      localStorage.setItem('devgear_orders_en_v2', JSON.stringify(localOrders.map((o) => (String(o._id) === String(updated._id) ? updated : o))));
+      const current = getStoredOrders();
+      const exists = current.some((o) => String(o._id) === String(updated._id));
+      const next = exists
+        ? current.map((o) => (String(o._id) === String(updated._id) ? updated : o))
+        : [updated, ...current];
+      localStorage.setItem('devgear_orders_en_v2', JSON.stringify(next));
     } catch {}
   };
 
@@ -33,7 +45,11 @@ const OrderScreen = ({ theme }) => {
       ...order,
       isPaid: true,
       paidAt: new Date().toISOString(),
-      paymentResult: { id: `pi_stripe_${Date.now()}`, status: 'COMPLETED', email_address: order.user?.email || userInfo?.email || 'customer@devgear.com' }
+      paymentResult: {
+        id: `pi_stripe_${Date.now()}`,
+        status: 'COMPLETED',
+        email_address: order.user?.email || userInfo?.email || 'customer@devgear.com'
+      }
     };
     try {
       const { data } = await axios.put(`/api/orders/${order._id}/pay`, paidOrder.paymentResult);
@@ -69,7 +85,7 @@ const OrderScreen = ({ theme }) => {
     <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '30px 16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', marginBottom: '24px' }}>
         <h1 style={{ fontSize: '26px', margin: 0, color: theme.textMain, fontWeight: '900' }}>Order #{order._id}</h1>
-        <Link to="/orders" style={{ color: '#2563eb', fontWeight: '700', textDecoration: 'none' }}>📦 View Order History →</Link>
+        <Link to="/orders" style={{ color: '#2563eb', fontWeight: '700', textDecoration: 'none' }}>📦 Back to Order History →</Link>
       </div>
 
       <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
@@ -89,7 +105,7 @@ const OrderScreen = ({ theme }) => {
             <h2 style={{ fontSize: '18px', margin: '0 0 12px 0', color: theme.textMain }}>Payment Status</h2>
             <p style={{ margin: '0 0 12px 0', color: theme.textMuted }}><strong>Method: </strong>{order.paymentMethod}</p>
             {order.isPaid ? (
-              <div style={{ padding: '10px 14px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', borderRadius: '8px', fontWeight: '700' }}>✓ Paid via Stripe Test Gateway ({new Date(order.paidAt).toLocaleTimeString()})</div>
+              <div style={{ padding: '10px 14px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', borderRadius: '8px', fontWeight: '700' }}>✓ Paid via Stripe Test Gateway ({new Date(order.paidAt).toLocaleDateString()})</div>
             ) : (
               <div style={{ padding: '10px 14px', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', borderRadius: '8px', fontWeight: '700' }}>⏳ Awaiting Payment Confirmation</div>
             )}
