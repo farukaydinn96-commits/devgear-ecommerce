@@ -16,9 +16,9 @@ const Product = ({ product, theme, onQuickAdd }) => {
   };
 
   return (
-    <div style={{ backgroundColor: theme.bgCard, borderRadius: '10px', border: `1px solid ${theme.borderColor}`, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <Link to={`/product/${product._id}`} style={{ display: 'block', position: 'relative', backgroundColor: '#0f172a' }}>
-        <img src={product.image} alt={product.name} loading="lazy" style={{ width: '100%', height: '160px', objectFit: 'cover', display: 'block' }} />
+    <div className="product-card" style={{ backgroundColor: theme.bgCard, borderRadius: '10px', border: `1px solid ${theme.borderColor}`, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <Link to={`/product/${product._id}`} className="product-img-wrapper" style={{ display: 'block', position: 'relative', backgroundColor: '#0f172a', overflow: 'hidden' }}>
+        <img src={product.image} alt={product.name} className="product-img" loading="lazy" style={{ width: '100%', height: '160px', objectFit: 'cover', display: 'block' }} />
         {!inStock && (
           <span style={{ position: 'absolute', top: '8px', right: '8px', backgroundColor: 'rgba(239, 68, 68, 0.92)', color: '#fff', fontSize: '10px', fontWeight: '700', padding: '3px 7px', borderRadius: '4px' }}>
             Out of Stock

@@ -17,7 +17,7 @@ const mergeWithInitialCatalog = (apiList) => {
       ...fallback,
       ...item,
       name: isOldTrackpad ? fallback.name : item.name,
-      image: isOldTrackpad ? fallback.image : item.image || fallback.image,
+      brand: isOldTrackpad ? fallback.brand : item.brand, price: isOldTrackpad ? fallback.price : item.price, description: isOldTrackpad ? fallback.description : item.description, image: isOldTrackpad ? fallback.image : item.image || fallback.image,
       rating: Number(item.rating) > 0 ? Number(item.rating) : fallback.rating,
       numReviews: Number(item.numReviews) > 0 ? Number(item.numReviews) : fallback.numReviews,
       reviews: Array.isArray(item.reviews) && item.reviews.length > 0 && !hasTurkishReview ? item.reviews : fallback.reviews
@@ -32,7 +32,7 @@ const HomeScreen = ({ theme }) => {
 
   const [products, setProducts] = useState(() => {
     try {
-      const cached = localStorage.getItem('devgear_products_en_v3');
+      const cached = localStorage.getItem('devgear_products_en_v4');
       return cached ? JSON.parse(cached) : INITIAL_PRODUCTS;
     } catch {
       return INITIAL_PRODUCTS;
@@ -57,7 +57,7 @@ const HomeScreen = ({ theme }) => {
       const rawList = Array.isArray(data) ? data : data.products || [];
       const enriched = mergeWithInitialCatalog(rawList);
       setProducts(enriched);
-      localStorage.setItem('devgear_products_en_v3', JSON.stringify(enriched));
+      localStorage.setItem('devgear_products_en_v4', JSON.stringify(enriched));
     }).catch(() => {});
     return () => { active = false; };
   }, []);

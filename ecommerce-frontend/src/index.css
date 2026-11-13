@@ -7,3 +7,19 @@ body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+.product-card {
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.14);
+}
+.product-img-wrapper {
+  overflow: hidden;
+}
+.product-img {
+  transition: transform 0.35s ease;
+}
+.product-card:hover .product-img {
+  transform: scale(1.08);
+}

@@ -7,7 +7,7 @@ import { INITIAL_PRODUCTS } from '../constants/initialProducts';
 
 const findCachedProduct = (productId) => {
   try {
-    const cached = JSON.parse(localStorage.getItem('devgear_products_en_v3') || '[]');
+    const cached = JSON.parse(localStorage.getItem('devgear_products_en_v4') || '[]');
     const found = cached.find((p) => String(p._id) === String(productId));
     if (found) return found;
   } catch {}
@@ -22,6 +22,8 @@ const ProductScreen = ({ theme }) => {
 
   const [product, setProduct] = useState(() => findCachedProduct(productId));
   const [qty, setQty] = useState(1);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 50, y: 50 });
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [reviewNotice, setReviewNotice] = useState('');
@@ -30,16 +32,28 @@ const ProductScreen = ({ theme }) => {
     setProduct(findCachedProduct(productId));
     axios.get(`/api/products/${productId}`).then(({ data }) => {
       const fallback = findCachedProduct(productId);
+      const isOldTrackpad = data.name === 'Apple Magic Trackpad';
       const hasTurkishReview = Array.isArray(data.reviews) && data.reviews.some((r) => /[ğüşıöçĞÜŞİÖÇ]/.test(r.comment || ''));
       setProduct({
         ...fallback,
         ...data,
+        name: isOldTrackpad ? fallback.name : data.name,
+        brand: isOldTrackpad ? fallback.brand : data.brand,
+        price: isOldTrackpad ? fallback.price : data.price,
+        description: isOldTrackpad ? fallback.description : data.description,
         rating: Number(data.rating) > 0 ? data.rating : fallback.rating,
         numReviews: Number(data.numReviews) > 0 ? data.numReviews : fallback.numReviews,
         reviews: Array.isArray(data.reviews) && data.reviews.length > 0 && !hasTurkishReview ? data.reviews : fallback.reviews
       });
     }).catch(() => {});
   }, [productId]);
+
+  const handleMouseMove = (e) => {
+    const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - left) / width) * 100;
+    const y = ((e.clientY - top) / height) * 100;
+    setMousePosition({ x, y });
+  };
 
   const addToCartHandler = () => {
     dispatch(addToCart({ ...product, qty }));
@@ -74,7 +88,38 @@ const ProductScreen = ({ theme }) => {
 
       <div style={{ display: 'flex', gap: '40px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
         <div style={{ flex: '1 1 380px' }}>
-          <img src={product.image} alt={product.name} style={{ width: '100%', height: '420px', objectFit: 'cover', borderRadius: '12px', border: `1px solid ${theme.borderColor}` }} />
+          <div
+            onMouseEnter={() => setIsZoomed(true)}
+            onMouseLeave={() => { setIsZoomed(false); setMousePosition({ x: 50, y: 50 }); }}
+            onMouseMove={handleMouseMove}
+            style={{
+              overflow: 'hidden',
+              borderRadius: '12px',
+              cursor: 'zoom-in',
+              border: `1px solid ${theme.borderColor}`,
+              position: 'relative',
+              backgroundColor: '#0f172a'
+            }}
+          >
+            <img
+              src={product.image}
+              alt={product.name}
+              style={{
+                width: '100%',
+                height: '440px',
+                display: 'block',
+                objectFit: 'cover',
+                transformOrigin: `${mousePosition.x}% ${mousePosition.y}%`,
+                transform: isZoomed ? 'scale(2.2)' : 'scale(1)',
+                transition: 'transform 0.25s ease-out'
+              }}
+            />
+            {!isZoomed && (
+              <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(15, 23, 42, 0.75)', color: '#fff', fontSize: '11px', fontWeight: '600', padding: '5px 10px', borderRadius: '6px', pointerEvents: 'none' }}>
+                🔍 Hover to Zoom
+              </span>
+            )}
+          </div>
         </div>
 
         <div style={{ flex: '1 1 320px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
