@@ -12,9 +12,9 @@ import { notFound, errorHandler } from './middlewares/errorMiddleware.js';
 const startServer = async () => {
   try {
     await connectDB();
-  await connectRedis();
+    await connectRedis();
   } catch (err) {
-    console.warn('Startup connection warning:', err.message);
+    console.warn('Baglanti uyarisi:', err.message);
   }
 };
 
@@ -40,7 +40,7 @@ app.use(
       ) {
         return callback(null, true);
       }
-      return callback(new Error('Not allowed by CORS'));
+      return callback(new Error('CORS tarafindan engellendi'));
     },
     credentials: true
   })
@@ -49,7 +49,7 @@ app.use(
 app.use(express.json({ limit: '16kb' }));
 app.use(cookieParser());
 
-app.get('/', (req, res) => res.send('DevGear E-Commerce API Active'));
+app.get('/', (req, res) => res.send('DevGear API Aktif'));
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
 
 app.use('/api/products', productRoutes);
@@ -60,4 +60,4 @@ app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Sunucu ${PORT} portunda calisiyor`));
