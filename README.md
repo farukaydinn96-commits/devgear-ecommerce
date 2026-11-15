@@ -1,9 +1,9 @@
 # DevGear — Full-Stack Developer Hardware E-Commerce Platform
 
-- **Live Storefront (Vercel):** [https://devgear-ecommerce-one.vercel.app](https://devgear-ecommerce-one.vercel.app)
-- **REST API (Render):** [https://devgear-api.onrender.com/api/health](https://devgear-api.onrender.com/api/health)
+- **Live Storefront (Vercel):** https://devgear-ecommerce-one.vercel.app
+- **REST API (Render):** https://devgear-api.onrender.com/api/health
 
-DevGear is a production-deployed MERN + Redis e-commerce platform built for software engineers. It features real JWT authentication, a 1-Click Recruiter Demo Sandbox, category/sort/pagination filtering, stock-validated checkout, itemized tax/shipping calculation, and Stripe Test Mode payment processing.
+DevGear is a production-deployed MERN + Redis e-commerce platform built for software engineers. It features real JWT authentication, a 1-Click Recruiter Demo Sandbox, category/sort/pagination filtering with state persistence, stock-validated checkout, itemized tax/shipping calculation, and Stripe Test Mode payment processing.
 
 ---
 
