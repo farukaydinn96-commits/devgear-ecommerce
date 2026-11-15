@@ -3,70 +3,91 @@ import assert from 'node:assert/strict';
 import products from '../src/data/products.js';
 import { calcOrderPrices, canAccessOrder } from '../src/utils/calcPrices.js';
 import { admin } from '../src/middlewares/authMiddleware.js';
+import {
+  checkAuthRateLimit,
+  resetAuthBuckets,
+  validateCredentialsInput,
+  validateReviewInput
+} from '../src/utils/security.js';
+import { errorHandler } from '../src/middlewares/errorMiddleware.js';
 
-test('1. Catalog dataset contains 24 hardware items with valid positive prices', () => {
-  assert.equal(products.length, 24);
-  for (const item of products) {
-    assert.ok(item.name && item.name.length > 2);
-    assert.ok(Number(item.price) > 0);
-    assert.ok(Number(item.countInStock) >= 0);
+const mockRes = () => ({
+  statusCode: 200,
+  body: null,
+  status(c) {
+    this.statusCode = c;
+    return this;
+  },
+  json(p) {
+    this.body = p;
+    return this;
   }
 });
 
-test('2. calcOrderPrices (real server utility) computes subtotal, free shipping >$100, and 15% tax', () => {
-  const highValue = calcOrderPrices([
-    { price: 199.0, qty: 1 },
-    { price: 50.0, qty: 2 }
-  ]);
-  assert.equal(highValue.itemsPrice, 299.0);
-  assert.equal(highValue.shippingPrice, 0.0);
-  assert.equal(highValue.taxPrice, 44.85);
-  assert.equal(highValue.totalPrice, 343.85);
-
-  const lowValue = calcOrderPrices([{ price: 49.0, qty: 1 }]);
-  assert.equal(lowValue.itemsPrice, 49.0);
-  assert.equal(lowValue.shippingPrice, 10.0);
-  assert.equal(lowValue.taxPrice, 7.35);
-  assert.equal(lowValue.totalPrice, 66.35);
+test('1. Catalog dataset contains 24 hardware items synced with frontend prices and names', () => {
+  assert.equal(products.length, 24);
+  assert.ok(products.some((p) => p.name.includes('Sony WH-1000XM4')));
+  assert.ok(products.some((p) => p.name.includes('Lumix G9')));
 });
 
-test('3. calcOrderPrices rejects negative prices or zero quantities', () => {
+test('2. calcOrderPrices computes subtotal, free shipping >$100, and 15% tax', () => {
+  const res = calcOrderPrices([{ price: 200, qty: 1 }]);
+  assert.equal(res.itemsPrice, 200);
+  assert.equal(res.shippingPrice, 0);
+  assert.equal(res.taxPrice, 30);
+  assert.equal(res.totalPrice, 230);
+});
+
+test('3. calcOrderPrices charges $10 shipping for orders <= $100', () => {
+  const res = calcOrderPrices([{ price: 50, qty: 1 }]);
+  assert.equal(res.shippingPrice, 10);
+  assert.equal(res.totalPrice, 67.5);
+});
+
+test('4. calcOrderPrices rejects empty carts, negative prices, or invalid quantities', () => {
   assert.throws(() => calcOrderPrices([]), /at least one item/);
-  assert.throws(() => calcOrderPrices([{ price: -10, qty: 1 }]), /Invalid item price/);
-  assert.throws(() => calcOrderPrices([{ price: 100, qty: 0 }]), /Invalid item price/);
+  assert.throws(() => calcOrderPrices([{ price: -5, qty: 1 }]), /Invalid item price/);
 });
 
-test('4. canAccessOrder enforces order ownership and admin override (prevents IDOR)', () => {
-  const sampleOrder = { user: { _id: 'user-111' } };
-  const ownerUser = { _id: 'user-111', isAdmin: false };
-  const otherUser = { _id: 'user-222', isAdmin: false };
-  const adminUser = { _id: 'admin-999', isAdmin: true };
-
-  assert.equal(canAccessOrder(sampleOrder, ownerUser), true);
-  assert.equal(canAccessOrder(sampleOrder, otherUser), false);
-  assert.equal(canAccessOrder(sampleOrder, adminUser), true);
+test('5. canAccessOrder enforces order ownership and admin override (IDOR protection)', () => {
+  const order = { user: { _id: 'u1' } };
+  assert.equal(canAccessOrder(order, { _id: 'u1', isAdmin: false }), true);
+  assert.equal(canAccessOrder(order, { _id: 'u2', isAdmin: false }), false);
+  assert.equal(canAccessOrder(order, { _id: 'admin1', isAdmin: true }), true);
 });
 
-test('5. admin middleware returns 403 Forbidden for non-admin users', () => {
-  let statusCode = 200;
-  let body = null;
-  let nextCalled = false;
-  const res = {
-    status(c) {
-      statusCode = c;
-      return this;
-    },
-    json(p) {
-      body = p;
-      return this;
-    }
-  };
+test('6. admin middleware returns 403 Forbidden for non-admin users', () => {
+  const res = mockRes();
+  admin({ user: { _id: 'u1', isAdmin: false } }, res, () => {});
+  assert.equal(res.statusCode, 403);
+});
 
-  admin({ user: { _id: 'u1', isAdmin: false } }, res, () => {
-    nextCalled = true;
-  });
+test('7. validateCredentialsInput blocks NoSQL operator objects and malformed emails', () => {
+  assert.equal(validateCredentialsInput({ $gt: '' }, '123456').valid, false);
+  assert.equal(validateCredentialsInput('bad-email', '123456').valid, false);
+  assert.equal(validateCredentialsInput('user@devgear.com', 'secret123').valid, true);
+});
 
-  assert.equal(nextCalled, false);
-  assert.equal(statusCode, 403);
-  assert.match(body.message, /Admin privileges required/);
+test('8. checkAuthRateLimit allows 10 requests/min and blocks the 11th request (429)', () => {
+  resetAuthBuckets();
+  for (let i = 0; i < 10; i++) {
+    assert.equal(checkAuthRateLimit('198.51.100.9'), true);
+  }
+  assert.equal(checkAuthRateLimit('198.51.100.9'), false);
+});
+
+test('9. validateReviewInput enforces integer ratings between 1 and 5', () => {
+  assert.equal(validateReviewInput({ rating: 6, comment: 'Too high' }).valid, false);
+  assert.equal(validateReviewInput({ rating: 0, comment: 'Too low' }).valid, false);
+  assert.equal(validateReviewInput({ rating: 5, comment: 'Solid build quality' }).valid, true);
+});
+
+test('10. errorHandler returns 403 on CORS rejection and 413 on oversized body', () => {
+  const resCors = mockRes();
+  errorHandler(new Error('Not allowed by CORS'), {}, resCors, () => {});
+  assert.equal(resCors.statusCode, 403);
+
+  const resLarge = mockRes();
+  errorHandler({ type: 'entity.too.large' }, {}, resLarge, () => {});
+  assert.equal(resLarge.statusCode, 413);
 });

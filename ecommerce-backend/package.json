@@ -9,7 +9,8 @@
     "dev": "nodemon src/server.js",
     "data:import": "node src/seeder.js",
     "data:destroy": "node src/seeder.js -d",
-    "test": "node --test tests/ecommerce.test.js"
+    "test": "node --test tests/ecommerce.test.js",
+    "catalog:sync": "node src/scripts/catalogSync.js"
   },
   "keywords": [],
   "author": "Faruk Aydin",

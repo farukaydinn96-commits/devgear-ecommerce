@@ -35,12 +35,11 @@ app.use(
     origin: (origin, callback) => {
       if (
         !origin ||
-        allowedOrigins.includes(origin) ||
-        /^https:\/\/devgear-[a-z0-9-]+\.vercel\.app$/i.test(origin)
+        allowedOrigins.includes(origin) || /^https:\/\/devgear-ecommerce(-[a-z0-9]+)?(-farukaydinn96-commits-projects)?\.vercel\.app$/i.test(origin)
       ) {
         return callback(null, true);
       }
-      return callback(new Error('CORS tarafindan engellendi'));
+      return callback(new Error('Not allowed by CORS'));
     },
     credentials: true
   })
