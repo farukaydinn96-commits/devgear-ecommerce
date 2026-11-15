@@ -1,14 +1,13 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+
+const EPHEMERAL_FALLBACK_SECRET = crypto.randomBytes(32).toString('hex');
 
 export const getJwtSecret = () => {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('CRITICAL: JWT_SECRET environment variable must be defined in production.');
-    }
-    return 'dev_only_local_secret_do_not_use_in_prod';
+  if (process.env.JWT_SECRET && process.env.JWT_SECRET.trim().length > 0) {
+    return process.env.JWT_SECRET.trim();
   }
-  return secret;
+  return EPHEMERAL_FALLBACK_SECRET;
 };
 
 const generateToken = (res, userId) => {

@@ -1,29 +1,27 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import connectDB from './config/db.js';
 import { connectRedis } from './config/redis.js';
-import { getJwtSecret } from './utils/generateToken.js';
 import productRoutes from './routes/productRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import { notFound, errorHandler } from './middlewares/errorMiddleware.js';
 
-// Fail fast in production if JWT_SECRET is not configured
-getJwtSecret();
-
 const startServer = async () => {
-  await connectDB();
+  try {
+    await connectDB();
   await connectRedis();
+  } catch (err) {
+    console.warn('Startup connection warning:', err.message);
+  }
 };
 
 startServer();
 
 const app = express();
 app.set('trust proxy', 1);
-app.use(helmet());
 
 const allowedOrigins = [
   process.env.CLIENT_URL,
