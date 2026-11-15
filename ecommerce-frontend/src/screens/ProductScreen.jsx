@@ -5,7 +5,7 @@ import axios from 'axios';
 import { addToCart } from '../slices/cartSlice';
 import { INITIAL_PRODUCTS, resolveProductData } from '../constants/initialProducts';
 
-const CATALOG_STORAGE_KEY = 'devgear_products_en_v6';
+const CATALOG_STORAGE_KEY = 'devgear_products_en_v7';
 
 const findCachedProduct = (productId) => {
   try {

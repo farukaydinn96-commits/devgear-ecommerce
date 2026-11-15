@@ -228,17 +228,17 @@ export const INITIAL_PRODUCTS = [
   makeProduct(
     'devgear-p14',
     'Bose QuietComfort Ultra',
-    'Marshall Major IV Iconic Wireless Headphones',
-    'Marshall',
+    'Sony WH-1000XM4 Wireless Noise Cancelling Headphones',
+    'Sony',
     'Audio',
-    149.99,
+    348.00,
     20,
     'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=800&q=80',
-    'Iconic studio headphones delivering 80+ hours of wireless playtime, custom-tuned dynamic drivers, wireless charging, and multi-directional control knob.',
+    'Flagship over-ear wireless headphones with Dual Noise Sensor technology, LDAC high-resolution audio, 30-hour battery life, and speak-to-chat detection.',
     [
-      { name: 'Peter Parker', rating: 5, comment: '80-hour battery life means I only charge these headphones once a month.', createdAt: '2026-10-21' },
-      { name: 'Gwen Stacy', rating: 5, comment: 'Signature punchy audio profile makes coding playlists sound incredible.', createdAt: '2026-11-04' },
-      { name: 'Faruk Aydin', rating: 5, comment: 'Classic textured finish, foldable design, and super comfortable ear cushions.', createdAt: '2026-11-09' }
+      { name: 'Peter Parker', rating: 5, comment: 'Zero clamping pressure even when wearing glasses for 8 hours straight.', createdAt: '2026-10-21' },
+      { name: 'Gwen Stacy', rating: 5, comment: ' Sony active noise cancellation completely silences background noise while coding.', createdAt: '2026-11-04' },
+      { name: 'Faruk Aydin', rating: 5, comment: 'Plush ear cushions, foldable design, and seamless multipoint Bluetooth switching.', createdAt: '2026-11-09' }
     ]
   ),
   makeProduct(
@@ -324,17 +324,17 @@ export const INITIAL_PRODUCTS = [
   makeProduct(
     'devgear-p20',
     'Elgato Stream Deck MK.2',
-    'Panasonic Lumix GH6 5.7K Mirrorless Creator Camera',
-    'Panasonic',
+    'Lumix G9 Pro 4K Mirrorless Studio Camera',
+    'Lumix',
     'Accessories',
-    1699.00,
+    1299.00,
     22,
     'https://images.unsplash.com/photo-1616423640778-28d1b53229bd?w=800&q=80',
-    'Professional mirrorless creator camera with 25.2MP sensor, unlimited 4K 60p streaming output via USB-C/HDMI, and dual I.S. stabilization.',
+    'Professional Lumix mirrorless camera with Leica DG lens, 4K 60p clean HDMI/USB streaming output, top status LCD, and 5-axis Dual I.S. 2 stabilization.',
     [
       { name: 'Arthur Curry', rating: 5, comment: 'Makes my developer YouTube tutorials and conference talks look cinema-grade.', createdAt: '2026-10-24' },
       { name: 'Mera Nereus', rating: 5, comment: 'Clean HDMI output works seamlessly as an ultra-sharp 4K studio webcam.', createdAt: '2026-11-02' },
-      { name: 'Faruk Aydin', rating: 5, comment: 'Lumix color science and autofocus reliability are unmatched for studio recording.', createdAt: '2026-11-08' }
+      { name: 'Faruk Aydin', rating: 5, comment: 'Lumix color science and Leica lens sharpness are unmatched for studio recording.', createdAt: '2026-11-08' }
     ]
   ),
   makeProduct(

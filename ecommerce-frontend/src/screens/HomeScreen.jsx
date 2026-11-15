@@ -9,7 +9,7 @@ import { addToCart } from '../slices/cartSlice';
 
 const CATEGORIES = ['All', 'Computers', 'Monitors', 'Audio', 'Accessories', 'Tablets', 'Wearables'];
 const PAGE_SIZE = 8;
-const CATALOG_STORAGE_KEY = 'devgear_products_en_v6';
+const CATALOG_STORAGE_KEY = 'devgear_products_en_v7';
 const UI_STATE_KEY = 'devgear_catalog_ui_state_v6';
 
 const loadSavedUiState = () => {
