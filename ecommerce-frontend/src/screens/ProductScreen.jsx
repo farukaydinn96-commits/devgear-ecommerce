@@ -205,7 +205,7 @@ const ProductScreen = ({ theme }) => {
               {'★'.repeat(Math.round(Number(computedRating)))} {computedRating}
             </span>
             <span style={{ color: theme.textMuted, fontSize: '14px', fontWeight: '600' }}>
-              ({exactReviewCount} verified {exactReviewCount === 1 ? 'review' : 'reviews'})
+              ({exactReviewCount} sample {exactReviewCount === 1 ? 'review' : 'reviews'})
             </span>
           </div>
           <div style={{ borderTop: `1px solid ${theme.borderColor}`, borderBottom: `1px solid ${theme.borderColor}`, padding: '20px 0' }}>
@@ -283,7 +283,7 @@ const ProductScreen = ({ theme }) => {
                   <span style={{ color: '#f59e0b', fontWeight: '800' }}>{'★'.repeat(Number(review.rating || 5))}</span>
                 </div>
                 <p style={{ color: theme.textMuted, fontSize: '12px', margin: '0 0 8px 0' }}>
-                  {review.createdAt ? String(review.createdAt).substring(0, 10) : 'Verified Purchase'}
+                  {review.createdAt ? String(review.createdAt).substring(0, 10) : 'Sample Review'}
                 </p>
                 <p style={{ margin: 0, color: theme.textMain, lineHeight: '1.5', fontSize: '14px' }}>{review.comment}</p>
               </div>

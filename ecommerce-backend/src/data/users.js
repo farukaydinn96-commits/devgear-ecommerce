@@ -1,18 +1,21 @@
-import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+
+const adminPassword = process.env.SEED_ADMIN_PASSWORD || crypto.randomUUID();
+const customerPassword = process.env.SEED_USER_PASSWORD || crypto.randomUUID();
 
 const users = [
   {
-    name: 'Admin Kullanıcı',
+    name: 'Faruk Aydin',
     email: 'admin@devgear.com',
-    password: bcrypt.hashSync('123456', 10),
-    isAdmin: true,
+    password: adminPassword,
+    isAdmin: true
   },
   {
-    name: 'Normal Müşteri',
-    email: 'musteri@devgear.com',
-    password: bcrypt.hashSync('123456', 10),
-    isAdmin: false,
-  },
+    name: 'Sample Customer',
+    email: 'customer@devgear.com',
+    password: customerPassword,
+    isAdmin: false
+  }
 ];
 
 export default users;

@@ -1,14 +1,24 @@
 import jwt from 'jsonwebtoken';
 
+export const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('CRITICAL: JWT_SECRET environment variable must be defined in production.');
+    }
+    return 'dev_only_local_secret_do_not_use_in_prod';
+  }
+  return secret;
+};
+
 const generateToken = (res, userId) => {
-  const secret = process.env.JWT_SECRET || 'devgear_jwt_secret_key_2026';
-  const token = jwt.sign({ userId }, secret, { expiresIn: '30d' });
+  const token = jwt.sign({ userId }, getJwtSecret(), { expiresIn: '7d' });
 
   res.cookie('jwt', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 30 * 24 * 60 * 60 * 1000
+    maxAge: 7 * 24 * 60 * 60 * 1000
   });
 
   return token;
